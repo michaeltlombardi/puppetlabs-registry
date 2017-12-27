@@ -57,6 +57,13 @@ describe Puppet::Type.type(:registry_value) do
       end
     end
 
+    %w[HKLM\Software\\\\nam\\e HKEY_LOCAL_MACHINE\Software\\\\nam\\e hklm\Software\\\\nam\\e].each do |root|
+      it "should use a double backslash when canonicalizing value names with a backslash #{root}" do
+        value = described_class.new(:path => root, :catalog => catalog)
+        value[:path].should == 'hklm\Software\\\\nam\e'
+      end
+    end
+
     it 'should validate the length of the value name'
     it 'should validate the length of the value data'
     it 'should be case-preserving'

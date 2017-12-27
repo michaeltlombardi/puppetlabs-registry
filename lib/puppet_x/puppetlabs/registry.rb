@@ -118,6 +118,20 @@ module Registry
   class RegistryValuePath < RegistryPathBase
     attr_reader :valuename
 
+    # Combines a registry key path and valuename into a resource title for
+    # registry_value resource.
+    #
+    # To maintain backwards compatibility, only use the double backslash
+    # delimiter if the valuename actually contains a backslash
+    def self.combine_path_and_value(keypath, valuename)
+      if valuename.include?('\\')
+        keypath + '\\\\' + valuename
+      else
+        keypath + '\\' + valuename
+      end
+    end
+
+
     # Extract the valuename from the path and then munge the actual path
     def initialize(path)
       @valuename = case path[-1, 1]
@@ -126,14 +140,24 @@ module Registry
         ''
       else
         @is_default = false
-        idx = path.rindex('\\') || 0
+        # Try finding the valuename via the double backslash method first
+        # and then revert to the old single backslash way
+        idx = path.rindex('\\\\') || 0
         if idx > 0
-          val = path[idx+1..-1]
+          val = path[idx+2..-1]
           # Strip the valuename from the path
           path = path[0..idx-1]
           val
         else
-          ''
+          idx = path.rindex('\\') || 0
+          if idx > 0
+            val = path[idx+1..-1]
+            # Strip the valuename from the path
+            path = path[0..idx-1]
+            val
+          else
+            ''
+          end
         end
       end
 
@@ -142,8 +166,12 @@ module Registry
 
     def canonical
       # Because we extracted the valuename in the initializer we
-      # need to add it back in when canical is called
-      filter_path[:canonical] + '\\' + valuename
+      # need to add it back in when canonical is called.
+      if valuename.include?('\\')
+        filter_path[:canonical] + '\\\\' + valuename
+      else
+        filter_path[:canonical] + '\\' + valuename
+      end
     end
 
     def default?
